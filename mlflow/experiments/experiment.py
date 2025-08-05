@@ -16,14 +16,14 @@ from botocore.client import Config
 
 os.environ['AWS_ACCESS_KEY_ID'] = 'minio'
 os.environ['AWS_SECRET_ACCESS_KEY'] = 'minio123'
-os.environ['ENDPOINT_URL'] = 'http://localhost:9001'
+os.environ['ENDPOINT_URL'] = 'http://localhost:9000'
 os.environ["MLFLOW_S3_ENDPOINT_URL"] = 'http://localhost:9000'
-os.environ["AWS_ENDPOINT_URL_S3"] = 'http://localhost:9001'
+os.environ["AWS_ENDPOINT_URL_S3"] = 'http://localhost:9000'
 
 
 mlflow.set_tracking_uri('http://localhost:5005')
 
-experiment_name = "default_model_experiment"
+experiment_name = "default_model_experiment v2"
 
 if not mlflow.get_experiment_by_name(experiment_name):
     mlflow.create_experiment(name=experiment_name)
@@ -34,7 +34,7 @@ experiment = mlflow.get_experiment_by_name(experiment_name)
 pg_user = os.getenv('PG_USER', 'airflow')
 pg_password = os.getenv('PG_PASSWORD', 'airflow')
 pg_host = 'localhost'  # Si estás ejecutando el script desde dentro del contenedor, usa 'postgres'
-pg_port = os.getenv('PG_PORT', '5440')
+pg_port = os.getenv('PG_PORT', '5432')
 pg_database = os.getenv('PG_DATABASE', 'airflow')
 
 db_url = f'postgresql+psycopg2://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_database}'
@@ -110,8 +110,9 @@ with mlflow.start_run(experiment_id = experiment.experiment_id):
     # Registrar el gráfico en MLflow
     mlflow.log_figure(plt.gcf(), artifact_file="feature_importances.png")
 
-    # Registramos el modelo y los datos de entrenamiento
-    mlflow.sklearn.log_model(xgb_regressor, 'xgb_regressor')
+    # Guardar el modelo XGBoost como artefacto en MLflow
+    mlflow.xgboost.log_model(xgb_regressor, artifact_path="xgb_regressor")
+    print("Modelo XGBoost guardado como artefacto en MLflow bajo 'xgb_regressor'")
 
 
 
