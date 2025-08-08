@@ -73,6 +73,7 @@ dmypy.json
 
 # Logs
 *.log
+**/*.log
 
 # Local files
 *.local
