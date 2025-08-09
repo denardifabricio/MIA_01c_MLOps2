@@ -9,6 +9,12 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
+import logging
+
+
+# Configuración de logging para que sea visible en consola Docker
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logger = logging.getLogger(__name__)
 
 
 def load_model(model_name: str, alias: str):
@@ -31,20 +37,20 @@ def load_model(model_name: str, alias: str):
         mlflow.set_tracking_uri('http://mlflow:5005')
         client_mlflow = mlflow.MlflowClient()
 
-        print(f"Intentando cargar modelo: {model_name} con alias: {alias}")
+        logger.info(f"Intentando cargar modelo: {model_name} con alias: {alias}")
         model_data_mlflow = client_mlflow.get_model_version_by_alias(model_name, alias)
-        print(f"Datos del modelo MLflow: {model_data_mlflow}")
+        logger.info(f"Datos del modelo MLflow: {model_data_mlflow}")
         if model_data_mlflow is None:
-            print(f"No se encontró el modelo '{model_name}' con alias '{alias}' en MLflow.")
+            logger.warning(f"No se encontró el modelo '{model_name}' con alias '{alias}' en MLflow.")
             return None, None, {}
-        print(f"Ruta del modelo en MLflow: {model_data_mlflow.source}")
+        logger.info(f"Ruta del modelo en MLflow: {model_data_mlflow.source}")
         model_ml = mlflow.sklearn.load_model(model_data_mlflow.source)
         version_model_ml = int(model_data_mlflow.version)
-        print(f'Modelo cargado exitosamente: Versión {version_model_ml}')
+        logger.info(f'Modelo cargado exitosamente: Versión {version_model_ml}')
     except MlflowException as e:
-        print(f'Error al conectar o cargar el modelo desde MLflow: {e}') 
+        logger.error(f'Error al conectar o cargar el modelo desde MLflow: {e}')
     except Exception as e:
-        print(f'Error al conectar o cargar el modelo desde MLflow: {e}')
+        logger.error(f'Error al conectar o cargar el modelo desde MLflow: {e}')
 
     try:
         # Descargar el StandardScaler desde S3
@@ -68,8 +74,9 @@ def load_model(model_name: str, alias: str):
             'scaler_X': scaler_X,
             'scaler_y': scaler_y
         }
-    except:
-        print('Informacion de estandarizado no encontrada')
+        logger.info('Scalers cargados correctamente desde S3.')
+    except Exception as e:
+        logger.warning(f'Informacion de estandarizado no encontrada: {e}')
         data_dictionary = {}
 
     return model_ml, version_model_ml, data_dictionary

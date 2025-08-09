@@ -6,9 +6,13 @@ WORKDIR /app
 
 # Copia el archivo requirements.txt al directorio de trabajo
 COPY requirements.txt .
+COPY predict.proto .
 
 # Instala las dependencias
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Genera los archivos de Python a partir del proto
+RUN python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. predict.proto
 
 # Copia el resto del código de la aplicación a /app
 COPY . .

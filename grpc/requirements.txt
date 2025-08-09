@@ -1,0 +1,8 @@
+grpcio
+grpcio-tools
+pandas
+numpy
+boto3
+mlflow
+scikit-learn
+xgboost

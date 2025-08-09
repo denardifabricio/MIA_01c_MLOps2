@@ -195,9 +195,58 @@ services:
       start_period: 120s
       retries: 3
   
+  grpc:
+    restart: always
+    build: "./grpc/"
+    image: backend_grpc
+    container_name: grpc
+    profiles:
+      - all
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      create_s3_buckets:
+        condition: service_completed_successfully
+      upload_file_to_s3:
+        condition: service_completed_successfully
+    ports:
+      - "50051:50051"
+    networks:
+      - frontend
+      - backend
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
+      - AWS_ENDPOINT_URL_S3=http://s3:9000
+
+  graphql:
+    restart: always
+    build: "./graphql/"
+    image: backend_graphql
+    container_name: graphql
+    profiles:
+      - all
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      create_s3_buckets:
+        condition: service_completed_successfully
+      upload_file_to_s3:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    networks:
+      - frontend
+      - backend
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
+      - AWS_ENDPOINT_URL_S3=http://s3:9000
   streamlit:
     restart: always
-    build: "./streamlit/dockerfiles/"
+    build: "./streamlit/"
     image: streamlit/streamlit:latest
     container_name: streamlit
     depends_on:
@@ -212,7 +261,8 @@ services:
     networks:
       - frontend
     environment:
-      - API_URL=http://fastapi:8800  # Cambiar a la URL de tu servicio FastAPI
+      - API_URL=http://fastapi:8800
+      - GRPC_URL=grpc:50051
 
   airflow-webserver:
     <<: *airflow-common
@@ -230,7 +280,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-
+    volumes:
+      - ./streamlit:/app
   airflow-cli:
     <<: *airflow-common
     container_name: airflow_cli
@@ -351,3 +402,5 @@ networks:
 volumes:
   db_data:
   minio_data:
+
+

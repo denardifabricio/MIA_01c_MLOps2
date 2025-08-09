@@ -1,0 +1,6 @@
+strawberry-graphql[fastapi]
+boto3
+mlflow
+pandas
+scikit-learn
+xgboost

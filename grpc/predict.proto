@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package predict;
+
+service PropertyPricePredictor {
+  rpc Predict (PredictRequest) returns (PredictResponse) {}
+}
+
+message PredictRequest {
+  float expenses_amount = 1;
+  float total_mts = 2;
+  float covered_mts = 3;
+  int32 rooms = 4;
+  int32 bedrooms = 5;
+  int32 bathrooms = 6;
+  int32 garages = 7;
+  int32 antique = 8;
+}
+
+message PredictResponse {
+  float prediction = 1;
+}
