@@ -12,6 +12,10 @@ import logging
 import predict_pb2
 import predict_pb2_grpc
 
+
+from botocore.client import Config
+import os
+
 # Configuración de logging para consola Docker
 def setup_logging():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -45,15 +49,23 @@ def load_model(model_name: str, alias: str):
 
     try:
         logger.info('[load_model] Intentando cargar scalers desde S3...')
-        s3 = boto3.client('s3')
-        bucket_name = 'data'
-        scaler_filename = '/scalers/scaler_X.pkl'
+        s3 = boto3.client(
+                's3',
+                endpoint_url=os.environ.get('AWS_ENDPOINT_URL_S3'),  # Usa la variable de entorno configurada en docker-compose
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                config=Config(signature_version='s3v4'),
+                region_name='auto'
+            )
+        
+        bucket_name = os.environ.get('DATA_REPO_BUCKET_NAME')
+        scaler_filename = 'scalers/scaler_X.pkl'
         logger.info(f'[load_model] Descargando scaler_X desde S3: bucket={bucket_name}, key={scaler_filename}')
         response = s3.get_object(Bucket=bucket_name, Key=scaler_filename)
         scaler_data = response['Body'].read()
         scaler_X = pickle.loads(scaler_data)
         logger.info('[load_model] scaler_X cargado correctamente.')
-        scaler_filename = '/scalers/scaler_y.pkl'
+        scaler_filename = 'scalers/scaler_y.pkl'
         logger.info(f'[load_model] Descargando scaler_y desde S3: bucket={bucket_name}, key={scaler_filename}')
         response = s3.get_object(Bucket=bucket_name, Key=scaler_filename)
         scaler_data = response['Body'].read()

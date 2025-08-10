@@ -17,6 +17,7 @@ from sqlalchemy import create_engine
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
+import os
 
 
 
@@ -43,14 +44,14 @@ def get_data(**kwargs):
     # Configurar conexión a MinIO
     s3_client = boto3.client(
         's3',
-        endpoint_url='http://s3:9000',  # URL de tu contenedor MinIO
-        aws_access_key_id='minio',  # Cambiar si tienes claves diferentes
-        aws_secret_access_key='minio123',  # Cambiar si tienes claves diferentes
+        endpoint_url=os.environ.get('AWS_ENDPOINT_URL_S3'),  # Usa la variable de entorno configurada en docker-compose
+        aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
         config=Config(signature_version='s3v4'),
-        region_name='us-east-1'  # Puedes cambiar la región
+        region_name='us-east-1'
     )
 
-    bucket_name = 'data'  # Nombre del bucket
+    bucket_name = os.environ.get('DATA_REPO_BUCKET_NAME')
     file_key = 'train_data.xlsx'  # Nombre del archivo en el bucket
 
     # Descargar el archivo como objeto
@@ -305,18 +306,36 @@ def scale_data(**kwargs):
     scaler_data_x = pickle.dumps(scaler_X)
     scaler_data_y = pickle.dumps(scaler_y)
 
-    # Subir a S3
-    s3 = boto3.client('s3')
-    bucket_name = 'data'
-    scaler_filename = '/scalers/scaler_X.pkl'
-    s3.put_object(Bucket=bucket_name, Key=scaler_filename, Body=scaler_data_x)
+    logging.info("Iniciando serialización y subida de scalers a S3...")
+    
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=os.environ.get('AWS_ENDPOINT_URL_S3'),  # Usa la variable de entorno configurada en docker-compose
+        aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+        config=Config(
+            signature_version='s3v4',
+            s3={'addressing_style': 'virtual'},
+            request_checksum_calculation='when_required',
+            response_checksum_validation='when_required'
+        ),
+        region_name='us-east-1'
+    )
 
-    scaler_filename = '/scalers/scaler_y.pkl'
-    s3.put_object(Bucket=bucket_name, Key=scaler_filename, Body=scaler_data_y)
+    bucket_name = os.environ.get('DATA_REPO_BUCKET_NAME')
+    scaler_filename = 'scalers/scaler_X.pkl'
+    logging.info(f"Subiendo scaler_X a S3: bucket={bucket_name}, key={scaler_filename}")
+    s3_client.put_object(Bucket=bucket_name, Key=scaler_filename, Body=scaler_data_x)
+    logging.info("Scaler_X serializado y subido a S3 en /scalers/scaler_X.pkl")
+    scaler_filename = 'scalers/scaler_y.pkl'
+    logging.info(f"Subiendo scaler_y a S3: bucket={bucket_name}, key={scaler_filename}")
+    s3_client.put_object(Bucket=bucket_name, Key=scaler_filename, Body=scaler_data_y)
+    logging.info("Scaler_Y serializado y subido a S3 en /scalers/scaler_y.pkl")
 
-    # Transformar el conjunto de testeo
+    logging.info("Transformando conjunto de testeo con los scalers...")
     X_test_scaled = scaler_X.transform(X_test)
     y_test_scaled = scaler_y.transform(y_test.values.reshape(-1, 1))
+    logging.info("Transformación de testeo completada.")
 
     X_train_scaled = pd.DataFrame(X_train_scaled, columns=X_train.columns)
     X_test_scaled = pd.DataFrame(X_test_scaled, columns=X_test.columns)

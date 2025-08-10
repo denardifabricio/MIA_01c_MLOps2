@@ -8,6 +8,10 @@ import strawberry
 from typing import Optional
 import logging
 
+from botocore.client import Config
+import os
+
+
 # Configuración de logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
@@ -34,13 +38,20 @@ def load_model(model_name: str, alias: str):
         logger.error(f'Error al conectar o cargar el modelo desde MLflow: {e}')
 
     try:
-        s3 = boto3.client('s3')
-        bucket_name = 'data'
-        scaler_filename = '/scalers/scaler_X.pkl'
+        s3 = boto3.client(
+                's3',
+                endpoint_url=os.environ.get('AWS_ENDPOINT_URL_S3'),  # Usa la variable de entorno configurada en docker-compose
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+                config=Config(signature_version='s3v4'),
+                region_name='auto'
+            )
+        bucket_name = os.environ.get('DATA_REPO_BUCKET_NAME')
+        scaler_filename = 'scalers/scaler_X.pkl'
         response = s3.get_object(Bucket=bucket_name, Key=scaler_filename)
         scaler_data = response['Body'].read()
         scaler_X = pickle.loads(scaler_data)
-        scaler_filename = '/scalers/scaler_y.pkl'
+        scaler_filename = 'scalers/scaler_y.pkl'
         response = s3.get_object(Bucket=bucket_name, Key=scaler_filename)
         scaler_data = response['Body'].read()
         scaler_y = pickle.loads(scaler_data)

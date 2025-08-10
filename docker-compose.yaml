@@ -9,6 +9,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres/${PG_DATABASE:-airflow}
     AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres/${PG_DATABASE:-airflow}
     AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__WEBSERVER__SECRET_KEY: 'bQw8Qw7Qw8Qw7Qw8Qw7Qw8Qw7Qw8Qw7Qw8Qw7Qw8Qw8='
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: False
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
@@ -16,10 +17,11 @@ x-airflow-common: &airflow-common
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'True'
     AIRFLOW__SECRETS__BACKEND: airflow.secrets.local_filesystem.LocalFilesystemBackend
     AIRFLOW__SECRETS__BACKEND_KWARGS: '{"variables_file_path": "/opt/secrets/variables.yaml", "connections_file_path": "/opt/secrets/connections.yaml"}'
-    AWS_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-minio}
-    AWS_SECRET_ACCESS_KEY: ${MINIO_SECRET_ACCESS_KEY:-minio123}
-    AWS_ENDPOINT_URL_S3: http://s3:9000
-    MLFLOW_S3_ENDPOINT_URL: http://s3:9000
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    AWS_ENDPOINT_URL_S3: https://storage.googleapis.com
+    MLFLOW_S3_ENDPOINT_URL: https://storage.googleapis.com
+    DATA_REPO_BUCKET_NAME: mlops2-data
   volumes:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
@@ -60,31 +62,31 @@ services:
       timeout: 20s
       retries: 3
 
-  s3:
-    restart: always
-    image: minio/minio:latest
-    container_name: minio
-    profiles:
-      - mlflow
-      - airflow
-      - all
-    ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_PORT_UI:-9001}:9001"
-    networks:
-      - frontend
-      - backend
-    environment:
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minio}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address :9001
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 60s
-      timeout: 20s
-      retries: 3
+  # s3:
+  #   restart: always
+  #   image: minio/minio:latest
+  #   container_name: minio
+  #   profiles:
+  #     - mlflow
+  #     - airflow
+  #     - all
+  #   ports:
+  #     - "${MINIO_PORT:-9000}:9000"
+  #     - "${MINIO_PORT_UI:-9001}:9001"
+  #   networks:
+  #     - frontend
+  #     - backend
+  #   environment:
+  #     - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minio}
+  #     - MINIO_SECRET_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
+  #   volumes:
+  #     - minio_data:/data
+  #   command: server /data --console-address :9001
+  #   healthcheck:
+  #     test: ["CMD", "mc", "ready", "local"]
+  #     interval: 60s
+  #     timeout: 20s
+  #     retries: 3
 
   create_s3_buckets:
     image: minio/mc:latest
@@ -93,9 +95,15 @@ services:
       - mlflow
       - airflow
       - all
-    depends_on:
-      s3:
-        condition: service_healthy
+    #depends_on:
+      #s3:
+      #   condition: service_healthy
+    environment:
+      - S3_ENDPOINT_URL=https://storage.googleapis.com
+      - S3_ACCESS_KEY=${AWS_ACCESS_KEY_ID}
+      - S3_SECRET_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_BUCKET_NAME=mlops2-mlflow
+      - DATA_REPO_BUCKET_NAME=mlops2-data
     networks:
       - backend
     entrypoint: >
@@ -107,17 +115,19 @@ services:
     image: minio/mc:latest
     container_name: minio_upload_file
     depends_on:
-      s3:
-        condition: service_healthy
       create_s3_buckets:
         condition: service_completed_successfully
     networks:
       - backend
+    environment:
+      - S3_ENDPOINT_URL=https://storage.googleapis.com
+      - S3_ACCESS_KEY=${AWS_ACCESS_KEY_ID}
+      - S3_SECRET_KEY=${AWS_SECRET_ACCESS_KEY}
+      - DATA_REPO_BUCKET_NAME=mlops2-data
     entrypoint: >
-      /bin/sh -c "sleep 20 &&
-                  mc alias set s3 http://s3:9000 ${MINIO_ACCESS_KEY:-minio} ${MINIO_SECRET_ACCESS_KEY:-minio123} &&
-                  mc cp /data/train_data.xlsx s3/${DATA_REPO_BUCKET_NAME:-data}/"
+      /bin/sh -c "/etc/upload_file_to_bucket.sh"
     volumes:
+      - ./minio/upload_file_to_bucket.sh:/etc/upload_file_to_bucket.sh
       - ./data/train_data.xlsx:/data/train_data.xlsx
 
 
@@ -140,17 +150,20 @@ services:
       - frontend
       - backend
     environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
-      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com   # o el endpoint que uses
+      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com      # opcional, si usás custom endpoint
+      - MLFLOW_BUCKET_NAME=mlops2-mlflow                         # el bucket donde guardás artefactos
+      - AWS_S3_SIGNATURE_VERSION=s3v4  
     command: >
       mlflow server 
       --backend-store-uri postgresql://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres:5432/mlflow_db
       --host 0.0.0.0 --port 5005
-      --default-artifact-root s3://${MLFLOW_BUCKET_NAME:-mlflow}/
+      --default-artifact-root s3://${MLFLOW_BUCKET_NAME:-mlops2-mlflow}/
     
-    volumes:
-      - ./mlflow/experiments/experiment.py:/app/experiment.py
+    # volumes:
+    #   - ./mlflow/experiments/experiment.py:/app/experiment.py
 
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://mlflow:5005 || exit 1
@@ -180,10 +193,10 @@ services:
       - frontend
       - backend
     environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
-      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
-      - AWS_ENDPOINT_URL_S3=http://s3:9000
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
+      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
     command: >
       uvicorn fastapi_app:app 
       --host 0.0.0.0
@@ -215,10 +228,10 @@ services:
       - frontend
       - backend
     environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
-      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
-      - AWS_ENDPOINT_URL_S3=http://s3:9000
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
+      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
 
   graphql:
     restart: always
@@ -240,10 +253,10 @@ services:
       - frontend
       - backend
     environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
-      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
-      - AWS_ENDPOINT_URL_S3=http://s3:9000
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
+      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
   streamlit:
     restart: always
     build: "./streamlit/"

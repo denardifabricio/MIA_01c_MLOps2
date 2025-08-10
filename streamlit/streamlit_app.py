@@ -6,6 +6,7 @@ import predict_pb2_grpc
 import logging
 import sys
 
+
 # URL del servicio FastAPI
 API_URL = "http://fastapi:8800/predict"
 # URL del servicio gRPC
