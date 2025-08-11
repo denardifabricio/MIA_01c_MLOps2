@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
 import logging
-
+import time
 
 from botocore.client import Config
 import os
@@ -124,21 +124,13 @@ async def read_root():
 # Definir la ruta para predicciones
 @app.post("/predict/")
 async def predict(input_data: ModelInput):
-    # Load the model before start
+    start_time = time.time()
     model, version_model, data_dict = load_model("precio_propiedades_model_prod", "prod")
-
-    # Convertir los datos de entrada a un DataFrame de pandas
     df = pd.DataFrame([input_data.dict()])
-
     scaler_X = data_dict['scaler_X']
     scaler_y = data_dict['scaler_y']
-
     df = scaler_X.transform(df)
-
-    # Hacer la predicción usando el modelo cargado desde MLflow
     prediction = model.predict(df)
-
     unstandarize_prediction = float(scaler_y.inverse_transform(prediction.reshape(-1, 1))[0][0])
-
-    # Retornar el resultado como JSON
-    return {"prediction": round(unstandarize_prediction,2)}
+    execution_time = time.time() - start_time
+    return {"prediction": round(unstandarize_prediction,2), "execution_time": execution_time}

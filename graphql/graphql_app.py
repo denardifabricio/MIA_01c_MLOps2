@@ -7,6 +7,7 @@ from sklearn.base import BaseEstimator
 import strawberry
 from typing import Optional
 import logging
+import time
 
 from botocore.client import Config
 import os
@@ -69,6 +70,7 @@ def load_model(model_name: str, alias: str):
 @strawberry.type
 class PredictionResult:
     prediction: float
+    execution_time: float
 
 @strawberry.input
 class PredictInput:
@@ -91,13 +93,13 @@ class Query:
 class Mutation:
     @strawberry.mutation
     def predict(self, input_data: PredictInput) -> PredictionResult:
+        start_time = time.time()
         logger.info(f"Solicitud de predicción recibida: {input_data}")
         model, version_model, data_dict = load_model("precio_propiedades_model_prod", "prod")
         if not model or not data_dict:
             logger.error("No se pudo cargar el modelo o los scalers. Retornando -1.")
-            return PredictionResult(prediction=-1)
-    
-
+            execution_time = time.time() - start_time
+            return PredictionResult(prediction=-1, execution_time=execution_time)
         df = pd.DataFrame([{ 
             'expenses_amount': input_data.expensesAmount,
             'total_mts': input_data.totalMts,
@@ -108,8 +110,6 @@ class Mutation:
             'garages': input_data.garages,
             'antique': input_data.antique
         }])
-
-
         logger.info(f"Datos de entrada convertidos a DataFrame: {df}")
         scaler_X = data_dict['scaler_X']
         scaler_y = data_dict['scaler_y']
@@ -119,7 +119,8 @@ class Mutation:
         logger.info(f"Predicción estandarizada: {prediction}")
         unstandarize_prediction = float(scaler_y.inverse_transform(prediction.reshape(-1, 1))[0][0])
         logger.info(f"Predicción final desescalada: {unstandarize_prediction}")
-        return PredictionResult(prediction=round(unstandarize_prediction, 2))
+        execution_time = time.time() - start_time
+        return PredictionResult(prediction=round(unstandarize_prediction, 2), execution_time=execution_time)
 
 schema = strawberry.Schema(query=Query, mutation=Mutation)
 

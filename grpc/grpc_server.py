@@ -86,10 +86,9 @@ class PropertyPricePredictorServicer(predict_pb2_grpc.PropertyPricePredictorServ
         logger.info(f'[PropertyPricePredictorServicer] Modelo cargado: {self.model is not None}, versión: {self.version_model}, data_dict_keys: {list(self.data_dict.keys())}')
 
     def Predict(self, request, context):
-
+        start_time = time.time()
         logger.info('[PropertyPricePredictorServicer] Inicializando servicer y cargando modelo...')
         self.model, self.version_model, self.data_dict = load_model("precio_propiedades_model_prod", "prod")
-
         logger.info(f"[Predict] Request recibido: {request}")
         # Convertir los datos de entrada a un DataFrame de pandas
         df = pd.DataFrame([{ 
@@ -110,7 +109,8 @@ class PropertyPricePredictorServicer(predict_pb2_grpc.PropertyPricePredictorServ
             logger.error(f"[Predict] No se encontraron los scalers necesarios en data_dict: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details('Scalers no encontrados en el servidor.')
-            return predict_pb2.PredictResponse(prediction=0.0)
+            execution_time = time.time() - start_time
+            return predict_pb2.PredictResponse(prediction=0.0, execution_time=execution_time)
         try:
             df_scaled = scaler_X.transform(df)
             logger.info(f"[Predict] DataFrame escalado: {df_scaled}")
@@ -118,12 +118,14 @@ class PropertyPricePredictorServicer(predict_pb2_grpc.PropertyPricePredictorServ
             logger.info(f"[Predict] Predicción escalada: {prediction}")
             unstandarize_prediction = float(scaler_y.inverse_transform(prediction.reshape(-1, 1))[0][0])
             logger.info(f"[Predict] Predicción final (desescalada): {unstandarize_prediction}")
-            return predict_pb2.PredictResponse(prediction=round(unstandarize_prediction,2))
+            execution_time = time.time() - start_time
+            return predict_pb2.PredictResponse(prediction=round(unstandarize_prediction,2), execution_time=execution_time)
         except Exception as e:
             logger.error(f"[Predict] Error durante la predicción: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details('Error durante la predicción.')
-            return predict_pb2.PredictResponse(prediction=0.0)
+            execution_time = time.time() - start_time
+            return predict_pb2.PredictResponse(prediction=0.0, execution_time=execution_time)
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

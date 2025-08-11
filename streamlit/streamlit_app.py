@@ -21,7 +21,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-# ...existing code...
 
 # Título de la aplicación
 st.title("Predicción de precio de propiedades en Capital Federal (API y gRPC)")
@@ -48,6 +47,8 @@ if st.button("Enviar"):
         "antique": antique
     }
 
+    resultados = []  # Lista para almacenar resultados de cada modelo
+
     # --- FASTAPI REST ---
     try:
         logger.info(f"Enviando datos a FastAPI: {data}")
@@ -55,8 +56,16 @@ if st.button("Enviar"):
         if response.status_code == 200:
             st.success("REST: Datos enviados correctamente")
             prediction = response.json().get("prediction")
+            execution_time = response.json().get("execution_time")
             st.write(f"REST: El valor de la propiedad asciende a U$S: {prediction}")
+            if execution_time is not None:
+                st.write(f"REST: Tiempo de ejecución: {execution_time:.4f} segundos")
             logger.info(f"Respuesta FastAPI: {prediction}")
+            resultados.append({
+                "Modelo": "REST",
+                "Resultado": round(prediction, 2) if prediction is not None else None,
+                "Tiempo de ejecución (s)": round(execution_time, 2) if execution_time is not None else None
+            })
         else:
             st.error(f"REST: Error al enviar los datos: {response.status_code}")
             logger.error(f"REST: Error al enviar los datos: {response.status_code}")
@@ -73,35 +82,42 @@ if st.button("Enviar"):
         grpc_response = stub.Predict(grpc_request)
         st.success("gRPC: Datos enviados correctamente")
         st.write(f"gRPC: El valor de la propiedad asciende a U$S: {grpc_response.prediction}")
+        exec_time = getattr(grpc_response, 'execution_time', None)
+        if exec_time is not None:
+            st.write(f"gRPC: Tiempo de ejecución: {exec_time:.4f} segundos")
         logger.info(f"Respuesta gRPC: {grpc_response.prediction}")
+        resultados.append({
+            "Modelo": "gRPC",
+            "Resultado": round(grpc_response.prediction, 2) if grpc_response.prediction is not None else None,
+            "Tiempo de ejecución (s)": round(exec_time, 2) if exec_time is not None else None
+        })
     except Exception as e:
         st.error(f"gRPC: Error: {e}")
         logger.error(f"gRPC: Error: {e}")
 
     # --- GraphQL ---
     try:
-
-        data = {
+        data_gql = {
             "expensesAmount": expenses_amount,
             "totalMts": total_mts,
             "coveredMts": covered_mts,
-            "rooms": rooms,     
+            "rooms": rooms,
             "bedrooms": bedrooms,
-            "bathrooms": bathrooms, 
+            "bathrooms": bathrooms,
             "garages": garages,
             "antique": antique
         }
-        
-        logger.info(f"Enviando datos a GraphQL: {data}")
+        logger.info(f"Enviando datos a GraphQL: {data_gql}")
         graphql_url = "http://graphql:8000/graphql"
         query = """
         mutation Predict($inputData: PredictInput!) {
             predict(inputData: $inputData) {
                 prediction
+                executionTime
             }
         }
         """
-        variables = {"inputData": data}
+        variables = {"inputData": data_gql}
         headers = {"Content-Type": "application/json"}
         graphql_response = requests.post(
             graphql_url,
@@ -111,10 +127,18 @@ if st.button("Enviar"):
         if graphql_response.status_code == 200:
             result = graphql_response.json()
             prediction = result.get("data", {}).get("predict", {}).get("prediction")
+            execution_time = result.get("data", {}).get("predict", {}).get("executionTime")
             if prediction is not None:
                 st.success("GraphQL: Datos enviados correctamente")
                 st.write(f"GraphQL: El valor de la propiedad asciende a U$S: {prediction}")
+                if execution_time is not None:
+                    st.write(f"GraphQL: Tiempo de ejecución: {execution_time:.4f} segundos")
                 logger.info(f"Respuesta GraphQL: {prediction}")
+                resultados.append({
+                    "Modelo": "GraphQL",
+                    "Resultado": round(prediction, 2) if prediction is not None else None,
+                    "Tiempo de ejecución (s)": round(execution_time, 2) if execution_time is not None else None
+                })
             else:
                 st.error("GraphQL: No se recibió una predicción válida")
                 logger.error(f"GraphQL: Respuesta inesperada: {result}")
@@ -124,3 +148,8 @@ if st.button("Enviar"):
     except Exception as e:
         st.error(f"GraphQL: Error: {e}")
         logger.error(f"GraphQL: Error: {e}")
+
+    # Mostrar tabla de resultados
+    if resultados:
+        st.markdown("### Comparación de modelos")
+        st.table(resultados)

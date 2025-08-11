@@ -19,4 +19,5 @@ message PredictRequest {
 
 message PredictResponse {
   float prediction = 1;
+  float execution_time = 2;
 }
