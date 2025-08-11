@@ -20,8 +20,8 @@ x-airflow-common: &airflow-common
     AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
     AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     AWS_ENDPOINT_URL_S3: https://storage.googleapis.com
-    MLFLOW_S3_ENDPOINT_URL: https://storage.googleapis.com
     DATA_REPO_BUCKET_NAME: mlops2-data
+    MLFLOW_S3_ENDPOINT_URL: https://storage.googleapis.com
   volumes:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
@@ -152,18 +152,16 @@ services:
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com   # o el endpoint que uses
-      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com      # opcional, si usás custom endpoint
-      - MLFLOW_BUCKET_NAME=mlops2-mlflow                         # el bucket donde guardás artefactos
-      - AWS_S3_SIGNATURE_VERSION=s3v4  
+      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
+      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
     command: >
       mlflow server 
       --backend-store-uri postgresql://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres:5432/mlflow_db
       --host 0.0.0.0 --port 5005
       --default-artifact-root s3://${MLFLOW_BUCKET_NAME:-mlops2-mlflow}/
     
-    # volumes:
-    #   - ./mlflow/experiments/experiment.py:/app/experiment.py
+    volumes:
+      - ./mlflow/experiments/experiment.py:/app/experiment.py
 
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://mlflow:5005 || exit 1
@@ -197,6 +195,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
       - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
+      - DATA_REPO_BUCKET_NAME=mlops2-data
     command: >
       uvicorn fastapi_app:app 
       --host 0.0.0.0
@@ -232,6 +231,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
       - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
+      - DATA_REPO_BUCKET_NAME=mlops2-data
 
   graphql:
     restart: always
@@ -257,6 +257,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
       - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
+      - DATA_REPO_BUCKET_NAME=mlops2-data
   streamlit:
     restart: always
     build: "./streamlit/"
@@ -293,6 +294,7 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+    
     volumes:
       - ./streamlit:/app
   airflow-cli:
