@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 import requests
 import grpc
@@ -149,7 +150,11 @@ if st.button("Enviar"):
         st.error(f"GraphQL: Error: {e}")
         logger.error(f"GraphQL: Error: {e}")
 
-    # Mostrar tabla de resultados
     if resultados:
         st.markdown("### Comparación de modelos")
-        st.table(resultados)
+        df_resultados = pd.DataFrame(resultados)
+        # Formatear las columnas numéricas a 2 decimales
+        for col in ["Resultado"]:
+            if col in df_resultados.columns:
+                df_resultados[col] = df_resultados[col].map(lambda x: f"{x:.2f}" if x is not None and x != "" else "")
+        st.table(df_resultados)
