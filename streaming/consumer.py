@@ -62,6 +62,7 @@ try:
         try:
             response = stub.Predict(request)
             predicted_price = response.prediction
+            print(f"Prediction from gRPC: {response.prediction}")
             real_price = float(data.get("real_price", 0))
             property_id = data.get("id", "N/A")
 
@@ -90,3 +91,4 @@ except KeyboardInterrupt:
 finally:
     consumer.close()
     print("Consumidor cerrado.")
+
