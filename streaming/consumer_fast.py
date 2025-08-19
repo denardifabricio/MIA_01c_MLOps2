@@ -6,7 +6,8 @@ import pandas as pd
 import numpy as np
 
 # URL de la API FastAPI dentro de Docker
-API_URL = "http://localhost:8800/predict"
+# API_URL = "http://localhost:8800/predict" # TODO: Deprecated - Eliminar esta linea en el futuro
+API_URL = "http://localhost:32001"
 
 
 # Configuración del consumidor Kafka
@@ -29,6 +30,7 @@ try:
         # Enviar datos a FastAPI
         try:
             response = requests.post(API_URL, json=data)
+            response.raise_for_status()  # Lanza un error si la respuesta no es 200
             if response.status_code == 200:
                 prediction = response.json().get("prediction")
                 print(f"Prediction from API: {prediction}")
