@@ -1,0 +1,19 @@
+apiVersion: "nuclio.io/v1"
+kind: NuclioFunction
+metadata:
+  name: predict-house-price-project
+  namespace: nuclio
+spec:
+  handler: predict_house_price:predict
+  runtime: python
+  triggers:
+    http:
+      kind: http
+      attributes:
+        port: 32001
+  build:
+    commands:
+      - "pip install pydantic==2.8.* mlflow==2.15.* pandas==2.0.* boto3 xgboost"
+  platform:
+    attributes:
+      network: mia_01c_mlops2_backend
