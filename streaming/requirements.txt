@@ -1,0 +1,5 @@
+fastapi[standard]>=0.113.0,<0.114.0
+kafka-python==2.0.2
+requests==2.31.0
+loguru
+aiokafka

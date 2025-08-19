@@ -6,6 +6,8 @@ import predict_pb2
 import predict_pb2_grpc
 import logging
 import sys
+import time
+import random
 
 
 # URL del servicio FastAPI
