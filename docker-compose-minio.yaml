@@ -19,11 +19,11 @@ x-airflow-common: &airflow-common
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
     AIRFLOW__SECRETS__BACKEND: airflow.secrets.local_filesystem.LocalFilesystemBackend
     AIRFLOW__SECRETS__BACKEND_KWARGS: '{"variables_file_path": "/opt/secrets/variables.yaml", "connections_file_path": "/opt/secrets/connections.yaml"}'
-    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-    AWS_ENDPOINT_URL_S3: https://storage.googleapis.com
-    DATA_REPO_BUCKET_NAME: mlops2-data
-    MLFLOW_S3_ENDPOINT_URL: https://storage.googleapis.com
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minio}
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minio123}
+    AWS_ENDPOINT_URL_S3: http://s3:9000
+    DATA_REPO_BUCKET_NAME: data
+    MLFLOW_S3_ENDPOINT_URL: http://s3:9000
   volumes:
     - ${AIRFLOW_PROJ_DIR:-./airflow}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-./airflow}/logs:/opt/airflow/logs
@@ -64,31 +64,31 @@ services:
       timeout: 20s
       retries: 3
 
-  # s3:
-  #   restart: always
-  #   image: minio/minio:latest
-  #   container_name: minio
-  #   profiles:
-  #     - mlflow
-  #     - airflow
-  #     - all
-  #   ports:
-  #     - "${MINIO_PORT:-9000}:9000"
-  #     - "${MINIO_PORT_UI:-9001}:9001"
-  #   networks:
-  #     - frontend
-  #     - backend
-  #   environment:
-  #     - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minio}
-  #     - MINIO_SECRET_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
-  #   volumes:
-  #     - minio_data:/data
-  #   command: server /data --console-address :9001
-  #   healthcheck:
-  #     test: ["CMD", "mc", "ready", "local"]
-  #     interval: 60s
-  #     timeout: 20s
-  #     retries: 3
+  s3:
+    restart: always
+    image: minio/minio:latest
+    container_name: minio
+    profiles:
+      - mlflow
+      - airflow
+      - all
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_PORT_UI:-9001}:9001"
+    networks:
+      - frontend
+      - backend
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minio}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address :9001
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
 
   create_s3_buckets:
     image: minio/mc:latest
@@ -97,15 +97,15 @@ services:
       - mlflow
       - airflow
       - all
-    #depends_on:
-    #s3:
-    #   condition: service_healthy
+    depends_on:
+      s3:
+        condition: service_healthy
     environment:
-      - S3_ENDPOINT_URL=https://storage.googleapis.com
-      - S3_ACCESS_KEY=${AWS_ACCESS_KEY_ID}
-      - S3_SECRET_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MLFLOW_BUCKET_NAME=mlops2-mlflow
-      - DATA_REPO_BUCKET_NAME=mlops2-data
+      - S3_ENDPOINT_URL=http://s3:9000
+      - S3_ACCESS_KEY=${AWS_ACCESS_KEY_ID:-minio}
+      - S3_SECRET_KEY=${AWS_SECRET_ACCESS_KEY:-minio123}
+      - MLFLOW_BUCKET_NAME=mlflow
+      - DATA_REPO_BUCKET_NAME=data
     networks:
       - backend
     entrypoint: >
@@ -116,16 +116,20 @@ services:
   upload_file_to_s3:
     image: minio/mc:latest
     container_name: minio_upload_file
+    profiles:
+      - mlflow
+      - airflow
+      - all
     depends_on:
       create_s3_buckets:
         condition: service_completed_successfully
     networks:
       - backend
     environment:
-      - S3_ENDPOINT_URL=https://storage.googleapis.com
-      - S3_ACCESS_KEY=${AWS_ACCESS_KEY_ID}
-      - S3_SECRET_KEY=${AWS_SECRET_ACCESS_KEY}
-      - DATA_REPO_BUCKET_NAME=mlops2-data
+      - S3_ENDPOINT_URL=http://s3:9000
+      - S3_ACCESS_KEY=${AWS_ACCESS_KEY_ID:-minio}
+      - S3_SECRET_KEY=${AWS_SECRET_ACCESS_KEY:-minio123}
+      - DATA_REPO_BUCKET_NAME=data
     entrypoint: >
       /bin/sh -c "/etc/upload_file_to_bucket.sh"
     volumes:
@@ -151,15 +155,14 @@ services:
       - frontend
       - backend
     environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
-      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
     command: >
       mlflow server 
       --backend-store-uri postgresql://${PG_USER:-airflow}:${PG_PASSWORD:-airflow}@postgres:5432/mlflow_db
       --host 0.0.0.0 --port 5005
-      --default-artifact-root s3://${MLFLOW_BUCKET_NAME:-mlops2-mlflow}/
+      --default-artifact-root s3://${MLFLOW_BUCKET_NAME:-mlflow}/
 
     volumes:
       - ./mlflow/experiments/experiment.py:/app/experiment.py
@@ -192,11 +195,10 @@ services:
       - frontend
       - backend
     environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
-      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
-      - DATA_REPO_BUCKET_NAME=mlops2-data
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
+      - AWS_ENDPOINT_URL_S3=http://s3:9000
     command: >
       uvicorn fastapi_app:app 
       --host 0.0.0.0
@@ -228,11 +230,10 @@ services:
       - frontend
       - backend
     environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
-      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
-      - DATA_REPO_BUCKET_NAME=mlops2-data
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
+      - AWS_ENDPOINT_URL_S3=http://s3:9000
 
   graphql:
     restart: always
@@ -254,16 +255,18 @@ services:
       - frontend
       - backend
     environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MLFLOW_S3_ENDPOINT_URL=https://storage.googleapis.com
-      - AWS_ENDPOINT_URL_S3=https://storage.googleapis.com
-      - DATA_REPO_BUCKET_NAME=mlops2-data
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY:-minio}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_ACCESS_KEY:-minio123}
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
+      - AWS_ENDPOINT_URL_S3=http://s3:9000
+
   streamlit:
     restart: always
     build: "./streamlit/"
     image: streamlit/streamlit:latest
     container_name: streamlit
+    profiles:
+      - all
     depends_on:
       create_s3_buckets:
         condition: service_completed_successfully
@@ -419,11 +422,15 @@ services:
     container_name: zookeeper
     profiles:
       - all
+      - kafka
     ports:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - backend
+      - frontend
 
   kafka:
     image: confluentinc/cp-kafka:7.0.1
@@ -431,6 +438,7 @@ services:
     container_name: kafka
     profiles:
       - all
+      - kafka
     ports:
       - "9092:9092"
       - "9094:9094" # Puerto para conexión externa
@@ -443,16 +451,14 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
       - zookeeper
+    networks:
+      - backend
+      - frontend
 
   nuclio:
     image: quay.io/nuclio/dashboard:stable-amd64
     container_name: nuclio
     restart: always
-    # depends_on:
-    #   create_s3_buckets:
-    #     condition: service_completed_successfully
-    #   upload_file_to_s3:
-    #     condition: service_completed_successfully
     profiles:
       - all
       - nuclio
@@ -467,8 +473,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - backend # <-- Agregar esta línea
-      - frontend # <-- Y esta si es necesario
+      - backend
+      - frontend
 
   nuclio-deployer:
     build:
@@ -484,10 +490,14 @@ services:
       - ./nuclio:/nuclio-functions
     entrypoint: sh /nuclio-functions/deploy.sh
     depends_on:
-      - nuclio
-      - mlflow
-      - create_s3_buckets
-      - upload_file_to_s3
+      nuclio:
+        condition: service_healthy
+      create_s3_buckets:
+        condition: service_completed_successfully
+      upload_file_to_s3:
+        condition: service_completed_successfully
+      mlflow:
+        condition: service_healthy
     networks:
       - backend
 
