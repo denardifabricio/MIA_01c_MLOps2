@@ -1,20 +1,16 @@
-#writefile hands_on_streaming/consumer.py
 import json
 import requests
 from kafka import KafkaConsumer
-import pandas as pd
-import numpy as np
 
-# URL de la API FastAPI dentro de Docker
-# API_URL = "http://localhost:8800/predict" # TODO: Deprecated - Eliminar esta linea en el futuro
-API_URL = "http://localhost:32001"
+# API_URL = "http://localhost:8800/predict" # TODO: Deprecated - Eliminar esta linea en el futuro | Apunta a FastAPI
+API_URL = "http://localhost:32001" # Apunta a la función de Nuclio
 
 
 # Configuración del consumidor Kafka
 consumer = KafkaConsumer(
     'appartment_data',
-    bootstrap_servers=['localhost:9094'], # Usar el puerto expuesto por Docker Compose
-    auto_offset_reset='earliest', # Empieza a leer desde el principio si no hay offset guardado
+    bootstrap_servers=['localhost:9094'],
+    auto_offset_reset='earliest',
     enable_auto_commit=True,
     group_id='ml-processing-group',
     value_deserializer=lambda x: json.loads(x.decode('utf-8'))
@@ -27,10 +23,9 @@ try:
         data = message.value
         print(f"Received from Kafka: {data}")
 
-        # Enviar datos a FastAPI
         try:
             response = requests.post(API_URL, json=data)
-            response.raise_for_status()  # Lanza un error si la respuesta no es 200
+            response.raise_for_status()
             if response.status_code == 200:
                 prediction = response.json().get("prediction")
                 print(f"Prediction from API: {prediction}")
