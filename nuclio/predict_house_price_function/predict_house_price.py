@@ -102,29 +102,6 @@ def _get_or_load_model(context):
     return model, data_dict
 
 
-def predict(context, event):
-    method = event.method
-    context.logger.info(f"HTTP method: {method}")
-
-    match method:
-        case "POST":
-            return _handle_post(context, event)
-        case "GET":
-            return context.Response(
-                body="Esta todo ok. Ejecuta un POST para predecir.",
-                headers={},
-                content_type="text/plain",
-                status_code=200,
-            )
-        case _:
-            return context.Response(
-                body="Method not allowed",
-                headers={},
-                content_type="text/plain",
-                status_code=405,
-            )
-
-
 def _handle_post(context, event):
     try:
         # Cargar modelo si es necesario (lazy loading)
@@ -132,7 +109,7 @@ def _handle_post(context, event):
 
         if model is None:
             return context.Response(
-                body="Error: Modelo no disponible. MLflow podría no estar listo.",
+                body="Error: Modelo no disponible. MLflow podría no estar listo o no se ha entrenado un modelo.",
                 headers={},
                 content_type="text/plain",
                 status_code=503,  # Service Unavailable
@@ -170,3 +147,43 @@ def _handle_post(context, event):
     except Exception as e:
         # Cualquier otro error
         return context.Response(body=str(e), headers={}, content_type="text/plain", status_code=500)
+
+
+def _handle_post_mock(context, event):
+    # Simulación de una predicción
+    try:
+        body = {
+            "prediction": 123456.78,
+            "execution_time": 0.123,
+        }
+        return context.Response(
+            body=json.dumps(body),
+            headers={},
+            content_type="application/json",
+            status_code=200,
+        )
+    except Exception as e:
+        return context.Response(body=str(e), headers={}, content_type="text/plain", status_code=500)
+
+
+def predict(context, event):
+    method = event.method
+    context.logger.info(f"HTTP method: {method}")
+
+    match method:
+        case "POST":
+            return _handle_post(context, event)
+        case "GET":
+            return context.Response(
+                body="Esta todo ok. Ejecuta un POST para predecir.",
+                headers={},
+                content_type="text/plain",
+                status_code=200,
+            )
+        case _:
+            return context.Response(
+                body="Method not allowed",
+                headers={},
+                content_type="text/plain",
+                status_code=405,
+            )

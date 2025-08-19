@@ -1,7 +1,7 @@
 apiVersion: "nuclio.io/v1"
 kind: NuclioFunction
 metadata:
-  name: predict-house-price-project
+  name: predict-house-price
   namespace: nuclio
 spec:
   handler: predict_house_price:predict
