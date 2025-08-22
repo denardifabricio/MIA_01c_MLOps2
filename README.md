@@ -87,29 +87,32 @@ Vamos a trabajar con el dataset `./data/train_data.xlsx`, que toma valores de la
 5. **Accede a los servicios disponibles:**
    - Apache Airflow: [http://localhost:8080](http://localhost:8080)(Usuario: airflow, Password: airflow)
    - MLflow: [http://localhost:5005](http://localhost:5005)
-   - Google Cloud Platform: [https://console.cloud.google.com/]
+   - Google Cloud Platform: [https://console.cloud.google.com/](https://console.cloud.google.com/)
    - Streamlit: [http://localhost:8501/](http://localhost:8501/)
 
-6. **(Opcional) Ejecución de ETL en Airflow:**
+> [!IMPORTANT]  
+> Deberías crear un bucket en Google Cloud Storage (GCS) para almacenar los archivos de entrenamiento y los modelos. Asegúrate de que el bucket tenga la política de acceso adecuada para que los servicios puedan interactuar con él. También existe un `docker-compose-minio.yml` que levanta un servicio de MinIO, compatible con la API de S3, para simular el almacenamiento en la nube. Si lo usas, asegúrate de cambiar las variables de entorno en el archivo `.env` para apuntar a MinIO. También deberías verificar que las rutas en las aplicaciones aputen a MinIO en lugar de GCS, puede que se nos haya pasado algún detalle 😁.
+
+1. **(Opcional) Ejecución de ETL en Airflow:**
    - En Apache Airflow, ejecuta el ETL haciendo clic en el botón de "play". Espera unos minutos hasta que se complete.
 
-7. **(Opcional) Visualiza los archivos en GoogleCloud:**
-   - Ahora podrás visualizar en la plataforma deGoogle Cloud el bucket con los archivos que se utilizarán en el entrenamiento del modelo.
+2. **(Opcional) Visualiza los archivos en GoogleCloud:**
+   - Ahora podrás visualizar en la plataforma de Google Cloud el bucket con los archivos que se utilizarán en el entrenamiento del modelo.
 
-8. **Entrenamiento del modelo:**
+3. **Entrenamiento del modelo:**
    - Ejecuta el notebook entero dentro de la carpeta `./notebooks` para realizar el entrenamiento del modelo. Si no realizaste los puntos 6 y 7, desde el notebook podes ejecutar el ETL en airflow (primera celda de código).
 
-9. **Visualización de resultados:**
+4. **Visualización de resultados:**
    - Podrás visualizar en MLflow el modelo entrenado, junto con sus métricas más importantes, así como en el repositorio S3.
 
-10. **Predicción con tu vivienda:**
-   - ¡Ya casi estás! Ingresa a la API, completa los datos de tu inmueble y haz clic en "Enviar".  
-   - La predicción se realizará utilizando tres métodos de comunicación: **FastAPI** (heredado de la primera versión) y, como novedades de este año, **gRPC** y **GraphQL**.  
-   - De esta forma podrás comparar en tiempo real el desempeño de cada protocolo y notar las diferencias en los tiempos de respuesta.
+5.  **Predicción con tu vivienda:**
+    - ¡Ya casi estás! Ingresa a la API, completa los datos de tu inmueble y haz clic en "Enviar".  
+    - La predicción se realizará utilizando tres métodos de comunicación: **FastAPI** (heredado de la primera versión) y, como novedades de este año, **gRPC** y **GraphQL**.  
+    - De esta forma podrás comparar en tiempo real el desempeño de cada protocolo y notar las diferencias en los tiempos de respuesta.
 
-11. **Encuentra tu próxima propiedad:**
+6.  **Encuentra tu próxima propiedad:**
    - Para ejecutar el flujo de streaming, seguí estos pasos:  
-     1. Abrí una terminal y ubicáte en la carpeta `streaming` del repositorio y activá el canal consumidor de la siguiente forma:  
+     1. Abrí una terminal y ubícate en la carpeta `streaming` del repositorio y activa el canal consumidor de la siguiente forma:  
         ```bash
         cd streaming/
         poetry run python consumer.py
@@ -129,7 +132,20 @@ Vamos a trabajar con el dataset `./data/train_data.xlsx`, que toma valores de la
 
      3. Al finalizar el proceso, se generará automáticamente un **archivo Excel** dentro del repositorio con todas las publicaciones seleccionadas, listas para analizar y aprovechar en tu próxima inversión inmobiliaria.
 
+7. **(Opcional) Utilización de funciones serverless con Nuclio:**
+   - Cuando realizaste `docker compose --profile all up`, se levantó un servicio de Nuclio. Puedes acceder a la interfaz de Nuclio en [http://localhost:8070](http://localhost:8070). Esta herramienta te permite crear funciones serverless que pueden ser utilizadas para realizar inferencias de modelos de machine learning de manera escalable y eficiente. Puedes crear una función que consuma el modelo entrenado y realice predicciones basadas en los datos de entrada. Ya existe una función de ejemplo en el repositorio.
+   - Está todo configurado para que puedas probarlo mediante *streaming*. En vez de ejecutar el consumer *gRPC* del paso anterior, ejecuta el siguiente comando:
+     ```bash
+     poetry run python consumer_fastapi_websocket.py
+     ```
+   
+   - Luego, en otra terminal (a parte del producer), ejecuta:
+     ```bash
+     curl localhost:8001/stream --no-buffer # No te olvides de tener el producer activo
+     ```
 
+> [!NOTE]  
+> Esto lo que hace es establecer una conexión utilizando SSE (Server-Sent Events) para recibir actualizaciones en tiempo real desde el servidor. Puedes ver cómo se reciben los mensajes en tiempo real a medida que se procesan las publicaciones. Esto mismo se podría consumir desde un frontend, como una aplicación web o móvil, para mostrar las actualizaciones en tiempo real a los usuarios.
 
 ## ¡Felicitaciones!
 
