@@ -139,23 +139,11 @@ Si has seguido todos los pasos, ya estás utilizando el poder de la inteligencia
 
 ## Posibles problemas
 
-### 1. Error al ejecutar Create Bucket
-Si al intentar crear un bucket recibes el siguiente error:
+### 1. Activar y configurar proyecto en Google Cloud Services
 
-```bash
-minio_create_bucket  | /bin/sh: /etc/create_buckets.sh: /bin/sh: bad interpreter: Permission denied
-```
 
 #### Solución
-Ejecuta el siguiente comando en una terminal para dar permisos de ejecución al script:
 
-```bash
-chmod +x create_buckets.sh
-```
-
-Este comando debe ser ejecutado en la carpeta `minio`.
-
----
 
 ### 2. Error al copiar Excel con datos
 Si al intentar copiar un archivo Excel a un bucket obtienes el siguiente error:
