@@ -157,8 +157,10 @@ Si has seguido todos los pasos, ya estás utilizando el poder de la inteligencia
 
 ### 1. Activar y configurar proyecto en Google Cloud Services
 
+Es necesario que cuentes con una cuenta de Google Cloud Services. Deberás por un lado, activar una cuenta de facturación para el proyecto, y por otro lado generar una cuenta de servicio HMAC:
 
-#### Solución
+![Conexión GCS](clave_acceso_gcs.png)
+
 
 
 ### 2. Error al copiar Excel con datos
