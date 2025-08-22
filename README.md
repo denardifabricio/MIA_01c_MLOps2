@@ -1,4 +1,4 @@
-# Bienvenido a PreciosProAI
+# Bienvenido a PreciosProAI 2
 
 ¿Estás buscando tu primera casa para independizarte, pero no tienes idea de cuál es el precio justo para lo que buscas? ¿No sabes qué precio ponerle a tu apartamento heredado? ¿O quizás estás buscando una buena oportunidad para invertir en un inmueble para el futuro? ¡Llegaste al lugar indicado!
 
@@ -6,11 +6,13 @@
     <img src="LogoPreciosProAI.jpg" alt="Logo Empresarial" width="300" style="border-radius: 50%;"/>
 </div>
 
-## Sobre PreciosProAI
+## Sobre PreciosProAI 2
 
 ### ¿Quiénes somos?
 
-PreciosProAI es una innovadora startup fundada por un grupo de cinco estudiantes del posgrado en CEIA que están cursando la materia Aprendizaje de Máquinas II: Fabricio Denardi, Mauro Aguirregaray, Alan Perez, Sofia Speri y Cristian Davico. Motivados por la pregunta de si, a partir de una lista pequeña de entradas, se podría predecir el precio de una vivienda, este equipo se propuso crear una solución que ayude a personas inexpertas en el mercado inmobiliario.
+PreciosProAI 2 es un proyecto innovador desarrollado por tres estudiantes del posgrado en CEIA/MIA (Fabricio Denardi, Bruno Masoller y Sofía Speri) en el marco de la materia MLOPS2. Surge como evolución de PreciosProAI, una primera versión que permitía, a partir de una pequeña lista de variables de entrada, predecir el precio de una vivienda.
+
+En esta nueva versión, el producto no solo busca ayudar a personas con poca experiencia en el mercado inmobiliario a obtener una estimación más rápida y precisa del valor de su propiedad, sino que también incorpora la capacidad de detectar en tiempo real publicaciones que se encuentren por debajo del valor de mercado, facilitando así la identificación de oportunidades de inversión.
 
 <div style="text-align: center;">
     <img src="EquipoTrabajo.jpg" alt="Equipo Trabajo" width="400"/>
@@ -21,9 +23,9 @@ PreciosProAI es una innovadora startup fundada por un grupo de cinco estudiantes
 
 En PreciosProAI, nuestra misión es proporcionar **estimaciones precisas para decisiones fáciles**. Creemos que con la ayuda de algoritmos de machine learning y una interfaz fácil de usar, podemos simplificar la compleja tarea de evaluar precios de propiedades, ayudando tanto a compradores primerizos como a inversionistas experimentados a tomar decisiones informadas.
 
-## ¿Qué datos necesito para poder usar PreciosPro AI?
+## ¿Qué datos necesito para poder usar PreciosPro AI 2?
 
-Para obtener una predicción precisa con PreciosPro AI, necesitarás proporcionar la siguiente información sobre el inmueble:
+Para obtener una predicción precisa con PreciosPro AI 2, necesitarás proporcionar la siguiente información sobre el inmueble:
 
 * **Monto de Expensas en ARS:** El valor mensual de las expensas.
 * **Metros Totales del Inmueble en m²:** La superficie total, incluyendo áreas cubiertas y descubiertas.
@@ -36,22 +38,26 @@ Para obtener una predicción precisa con PreciosPro AI, necesitarás proporciona
 
 *Nota: Te invitamos a probar el modelo ingresando los datos de tu propia vivienda.*
 
-## ¿Cómo funciona PreciosPro AI?
+## ¿Cómo funciona PreciosPro AI 2?
 
-PreciosPro AI es una implementación basada en los ejemplos de la materia CEIA AMq2. Utiliza Docker y Docker Compose para desplegar múltiples contenedores que representan diferentes servicios en un entorno productivo. Estos servicios trabajan en conjunto para procesar datos y generar predicciones (ver .env).
+PreciosPro AI 2 es una implementación basada en los conceptos vistos de la materia CEIA MLOPS2. Utiliza Docker y Docker Compose para desplegar múltiples contenedores que representan diferentes servicios en un entorno productivo. Estos servicios trabajan en conjunto para procesar datos y generar predicciones (ver .env).
 
 Los servicios que forman parte de PreciosPro AI son:
-- **[Apache Airflow](https://airflow.apache.org/):** Orquestación de flujos de trabajo.
+- **[Apache Airflow](https://airflow.apache.org/):** Orquestación de flujos de trabajo (entrenamiento, versionado y despliegue).
 - **[MLflow](https://mlflow.org/):** Gestión del ciclo de vida de los modelos de machine learning.
-- **API REST con [FastAPI](https://fastapi.tiangolo.com/):** Para servir los modelos y responder a solicitudes.
-- **[MinIO](https://min.io/):** Almacenamiento de objetos compatible con S3.
 - **Base de datos relacional [PostgreSQL](https://www.postgresql.org/):** Para gestionar y almacenar datos estructurados.
+- **API REST con [FastAPI](https://fastapi.tiangolo.com/):** Para servir los modelos y responder a solicitudes.
+- **Google Cloud Storage (S3 API compatible):** Almacenamiento de objetos en la nube para datasets, artefactos y modelos.
+- **Apache Kafka:** Sistema de mensajería distribuido para streaming de datos en tiempo real.
+- **gRPC:** Protocolo de comunicación de alto rendimiento entre microservicios y backends.
+- **GraphQL:** Interfaz flexible de consulta y mutación para clientes frontend y servicios.
+- **Nuclio:** Framework de serverless functions para procesamiento de datos y ejecución de inferencias a gran escala.
 
-![Diagrama de servicios](final_assign.png)
+![Diagrama de servicios](final_assign_new.png)
 
 Vamos a trabajar con el dataset `./data/train_data.xlsx`, que toma valores de la página [ZonaProp](https://www.zonaprop.com.ar) de propiedades de Capital Federal.
 
-## ¿Cómo uso PreciosPro AI?
+## ¿Cómo uso PreciosPro AI 2?
 
 ¡Ya quedan los últimos pasos para poder usar inteligencia artificial y estimar el precio de tu vivienda! Pero paciencia, primero vamos a asegurarnos de que todo funcione correctamente.
 
@@ -62,7 +68,7 @@ Vamos a trabajar con el dataset `./data/train_data.xlsx`, que toma valores de la
    - Para levantar todos los servicios, primero instala [Docker](https://docs.docker.com/engine/install/) en tu computadora (o en el servidor que desees usar).
    - **Nota para Windows:** Asegúrate de tener Docker Desktop ejecutándose mientras trabajas.
 
-### Pasos para Configurar y Usar PreciosPro AI
+### Pasos para Configurar y Usar PreciosPro AI 2
 
 1. **Clona este repositorio.**
 
@@ -81,23 +87,49 @@ Vamos a trabajar con el dataset `./data/train_data.xlsx`, que toma valores de la
 5. **Accede a los servicios disponibles:**
    - Apache Airflow: [http://localhost:8080](http://localhost:8080)(Usuario: airflow, Password: airflow)
    - MLflow: [http://localhost:5005](http://localhost:5005)
-   - MinIO (administración de buckets): [http://localhost:9001](http://localhost:9001)(Usuario: minio, Password: minio123)
+   - Google Cloud Platform: [https://console.cloud.google.com/]
    - Streamlit: [http://localhost:8501/](http://localhost:8501/)
 
 6. **(Opcional) Ejecución de ETL en Airflow:**
    - En Apache Airflow, ejecuta el ETL haciendo clic en el botón de "play". Espera unos minutos hasta que se complete.
 
-7. **(Opcional) Visualiza los archivos en MinIO:**
-   - Ahora podrás visualizar en MinIO el bucket con los archivos que se utilizarán en el entrenamiento del modelo.
+7. **(Opcional) Visualiza los archivos en GoogleCloud:**
+   - Ahora podrás visualizar en la plataforma deGoogle Cloud el bucket con los archivos que se utilizarán en el entrenamiento del modelo.
 
 8. **Entrenamiento del modelo:**
    - Ejecuta el notebook entero dentro de la carpeta `./notebooks` para realizar el entrenamiento del modelo. Si no realizaste los puntos 6 y 7, desde el notebook podes ejecutar el ETL en airflow (primera celda de código).
 
 9. **Visualización de resultados:**
-   - Podrás visualizar en MLflow el modelo entrenado, junto con sus métricas más importantes, así como en MinIO.
+   - Podrás visualizar en MLflow el modelo entrenado, junto con sus métricas más importantes, así como en el repositorio S3.
 
 10. **Predicción con tu vivienda:**
-    - ¡Ya casi estás! Ahora entra en la API, llena los datos de tu inmueble, y haz clic en "Enviar".
+   - ¡Ya casi estás! Ingresa a la API, completa los datos de tu inmueble y haz clic en "Enviar".  
+   - La predicción se realizará utilizando tres métodos de comunicación: **FastAPI** (heredado de la primera versión) y, como novedades de este año, **gRPC** y **GraphQL**.  
+   - De esta forma podrás comparar en tiempo real el desempeño de cada protocolo y notar las diferencias en los tiempos de respuesta.
+
+11. **Encuentra tu próxima propiedad:**
+   - Para ejecutar el flujo de streaming, seguí estos pasos:  
+     1. Abrí una terminal y ubicáte en la carpeta `streaming` del repositorio y activá el canal consumidor de la siguiente forma:  
+        ```bash
+        cd streaming/
+        poetry run python consumer.py
+        ```
+        Cuando veas el mensaje en pantalla  
+        ```
+        Escuchando mensajes en el tópico 'appartment_data'...
+        ```  
+        significa que el consumidor está activo.  
+
+     2. En otra terminal, repetí el procedimiento pero esta vez ejecutando el **productor**:  
+        ```bash
+        cd streaming/
+        poetry run python producer.py
+        ```
+        Una vez activo, verás en pantalla las publicaciones encontradas a ser analizadas por el consumidor.  
+
+     3. Al finalizar el proceso, se generará automáticamente un **archivo Excel** dentro del repositorio con todas las publicaciones seleccionadas, listas para analizar y aprovechar en tu próxima inversión inmobiliaria.
+
+
 
 ## ¡Felicitaciones!
 
@@ -145,4 +177,4 @@ Asegúrate de reemplazar `/Users/tu_usuario/` con la ruta correspondiente en tu 
 
 # Conclusiones
 
-Más allá de que no nos hacemos responsables de las inversiones que puedan hacer los usuarios y que la empresa PreciosPro AI roza lo ilegal, creemos que este trabajo estuvo muy bueno. Poder poner en "producción" un modelo es una tarea que normalemente se deja de lado en cursos de Machine Learning y tener que levantar todos los servicios necesarios, conocerlos, luchar con ellos, creemos que es algo que nos puede ayudar mucho y diferenciar en el mercado laboral.
+Más allá de que no nos hacemos responsables de las inversiones que puedan hacer los usuarios y que el proyecto PreciosPro AI 2 roza lo ilegal, creemos que este trabajo estuvo muy bueno. Poder poner en "producción" un modelo es una tarea que normalemente se deja de lado en cursos de Machine Learning y tener que levantar todos los servicios necesarios, conocerlos, luchar con ellos, creemos que es algo que nos puede ayudar mucho y diferenciar en el mercado laboral.
