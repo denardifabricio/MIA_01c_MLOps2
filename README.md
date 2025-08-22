@@ -166,3 +166,12 @@ Asegúrate de reemplazar `/Users/tu_usuario/` con la ruta correspondiente en tu 
 # Conclusiones
 
 Más allá de que no nos hacemos responsables de las inversiones que puedan hacer los usuarios y que el proyecto PreciosPro AI 2 roza lo ilegal, creemos que este trabajo estuvo muy bueno. Poder poner en "producción" un modelo es una tarea que normalemente se deja de lado en cursos de Machine Learning y tener que levantar todos los servicios necesarios, conocerlos, luchar con ellos, creemos que es algo que nos puede ayudar mucho y diferenciar en el mercado laboral.
+
+
+# Contacto
+
+Para más información o si querés sumarte al equipo, podes contactarnos a:  
+<denardifabricio@gmail.com>  
+<sofia.speri@gmail.com>  
+<brunomaso1@gmail.com>
+
